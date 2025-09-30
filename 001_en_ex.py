@@ -4,12 +4,15 @@ import io
 import datetime
 import pandas as pd
 
-# 題庫
 words = [
-    "citizen", "difference", "kind", "munch", 
-    "bellowed", "rough", "handle", "cool", 
-    "bounce", "grinned", "might"
+    "external", "front leg", "hind leg", "wing",
+    "head", "foot", "tail", "claws",
+    "skin", "skin coverings", "fur", "scales",
+    "feathers", "spines", "offspring", "young",
+    "adult", "reproduce", "give birth", "lay eggs",
+    "hatch", "crawl"
 ]
+
 
 # 初始化 session state
 if "index" not in st.session_state:
