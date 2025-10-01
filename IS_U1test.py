@@ -67,24 +67,29 @@ st.markdown("<p style='font-size:18px'>✏️ 單字測驗（請輸入你聽到�
 
 # --- 三個發音按鈕 ---
 col1, col2, col3 = st.columns(3)
+
 with col1:
     if st.button("▶ 單字（英文）"):
+        # 直接播放英文單字
         tts = gTTS(current_word, lang="en")
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         st.audio(fp.getvalue(), format="audio/mp3")
+
 with col2:
     if st.button("▶ 例句（英文）"):
         tts = gTTS(sentence, lang="en")
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         st.audio(fp.getvalue(), format="audio/mp3")
+
 with col3:
     if st.button("▶ 中文翻譯"):
         tts = gTTS(sentence_zh, lang="zh-TW")
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         st.audio(fp.getvalue(), format="audio/mp3")
+
 
 # 顯示文字 (不顯示英文單字)
 st.write(f"中文單字翻譯：**{translation}**")
@@ -104,14 +109,19 @@ with st.form(key=f"form_{current_word}", clear_on_submit=False):
             st.session_state.answered[current_word] = True
         else:
             st.session_state.stats[current_word]["錯誤"] += 1
-            st.error(f"❌ 答錯！")
+            # ❌ 答錯時顯示正確答案
+            st.error(f"❌ 答錯！正確答案是：**{current_word}**")
             st.session_state.answered[current_word] = False
+        
+        # 紀錄歷史
         st.session_state.history.append({
             "單字": current_word,
             "學生輸入答案": user_input,
             "結果": "正確" if user_input.strip().lower()==current_word.lower() else "錯誤",
+            "正確答案": current_word,
             "時間": now_str
         })
+
 
 # --- 下一題 ---
 if st.button("➡ 下一題"):
