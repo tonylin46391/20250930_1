@@ -4,15 +4,27 @@ import io
 import datetime
 import pandas as pd
 
+# 題庫
 words = [
-    "external", "front leg", "hind leg", "wing",
-    "head", "foot", "tail", "claws",
-    "skin", "skin coverings", "fur", "scales",
-    "feathers", "spines", "offspring", "young",
-    "adult", "reproduce", "give birth", "lay eggs",
-    "hatch", "crawl"
+    "external/ placed or growing outside or on the outside of something." , "difference", "kind", "munch", 
+    "bellowed", "rough", "handle", "cool", 
+    "bounce", "grinned", "might"
 ]
 
+# 新增：中英文對照表
+translations = {
+    "external": "外部 / 句子:位於或生長在某物外部",
+    "difference": "差異",
+    "kind": "種類 / 善良的",
+    "munch": "大聲咀嚼",
+    "bellowed": "吼叫",
+    "rough": "粗糙的 / 粗暴的",
+    "handle": "處理 / 把手",
+    "cool": "涼爽 / 酷的",
+    "bounce": "彈跳",
+    "grinned": "咧嘴笑",
+    "might": "可能 / 力量"
+}
 
 # 初始化 session state
 if "index" not in st.session_state:
@@ -39,24 +51,24 @@ def generate_tts(word):
     fp.seek(0)
     st.audio(fp.read(), format="audio/mp3")
 
+    # 新增：播放時顯示中文翻譯
+    if word in translations:
+        st.markdown(f"<p style='font-size:20px'>中文翻譯：<b>{translations[word]}</b></p>", unsafe_allow_html=True)
+
 # 📌 取得下一個題目
 def get_next_word():
-    # 優先處理錯題 queue
     if st.session_state.mode == "review":
         if st.session_state.retry_queue:
             return st.session_state.retry_queue[0]
         else:
-            # 錯題複習結束 → 回到新一輪
             st.session_state.mode = "normal"
             st.session_state.index = 0
             st.session_state.last_result = "🎉 錯題複習完成！開始新一輪！"
             return words[st.session_state.index]
 
-    # normal 模式 → 按順序走題庫
     if st.session_state.index < len(words):
         return words[st.session_state.index]
     else:
-        # 一輪結束 → 準備錯題複習
         wrongs = [w for w, ans in st.session_state.answered.items() if ans is False]
         if wrongs:
             st.session_state.mode = "review"
@@ -64,7 +76,6 @@ def get_next_word():
             st.session_state.last_result = "🔁 進入錯題複習！"
             return st.session_state.retry_queue[0]
         else:
-            # 全部答對 → 新一輪
             st.session_state.index = 0
             st.session_state.answered = {}
             st.session_state.last_result = "🎉 全部正確！開始新一輪！"
@@ -74,7 +85,7 @@ def get_next_word():
 current_word = get_next_word()
 input_key = f"input_{current_word}_{st.session_state.index}_{st.session_state.mode}"
 
-# 自動播放音訊
+# 自動播放音訊 + 顯示翻譯
 if "played" not in st.session_state or st.session_state.get("last_word") != current_word:
     generate_tts(current_word)
     st.session_state.played = True
@@ -93,8 +104,6 @@ def submit_answer():
         st.session_state.stats[current_word]["正確"] += 1
         result = "正確"
         st.session_state.last_result = "✅ 答對了！"
-
-        # 複習模式 → 答對後移出 queue
         if st.session_state.mode == "review":
             if current_word in st.session_state.retry_queue:
                 st.session_state.retry_queue.remove(current_word)
@@ -104,14 +113,9 @@ def submit_answer():
         st.session_state.stats[current_word]["錯誤"] += 1
         result = "錯誤"
         st.session_state.last_result = "❌ 答錯！"
-
-        if st.session_state.mode == "review":
-            # 答錯 → 保留在 queue
-            pass
-        else:
+        if st.session_state.mode != "review":
             st.session_state.answered[current_word] = False
 
-    # 紀錄歷史
     st.session_state.history.append({
         "題目": current_word,
         "結果": result,
@@ -119,11 +123,9 @@ def submit_answer():
         "時間": now_str
     })
 
-    # normal 模式 → 下一題
     if st.session_state.mode == "normal":
         st.session_state.index += 1
 
-    # reset 播放
     st.session_state.played = False
     st.session_state.last_word = None
 
