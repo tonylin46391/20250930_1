@@ -94,7 +94,11 @@ word_bank = [
         "translation": "防水的",
         "sentence": "Ella can tell that the box is made of a waterproof material if the table is still dry and the box does not let water through.",
         "sentence_zh": "如果桌子依然是乾的，而且盒子不讓水漏出去，Ella 就可以判斷這個盒子是由防水材料做成的。"
-    }
+    },
+    {"word": "raincoat", 
+    "translation": "雨衣",
+     "sentence": "I wear a raincoat on rainy days to keep my clothes dry.",
+     "sentence_zh": "下雨天我會穿雨衣，讓衣服保持乾燥。"}
 
 
 ]
