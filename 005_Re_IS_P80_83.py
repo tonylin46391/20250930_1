@@ -64,6 +64,39 @@ word_bank = [
     {"word": "waterproof", "translation": "防水的",
      "sentence": "My raincoat is waterproof, so the rain cannot soak my clothes.",
      "sentence_zh": "我的雨衣是防水的，所以雨水不會把衣服弄濕。"},
+
+     {
+        "word": "metal",
+        "translation": "金屬",
+        "sentence": "Clue 1: I am a strong and hard material. I come from under the ground. I am used to make the body of a car. What material am I?",
+        "sentence_zh": "線索 1：我是一種堅固又硬的材料。我來自地底下。我被用來製造汽車的車身。我是什麼材料呢？"
+    },
+    {
+        "word": "cotton",
+        "translation": "棉花",
+        "sentence": "Clue 2: I am a light and soft material. I come from a plant. I am used to make clothes. What material am I?",
+        "sentence_zh": "線索 2：我是一種輕又柔軟的材料。我來自一種植物。我被用來做衣服。我是什麼材料呢？"
+    },
+    {
+        "word": "plastic",
+        "translation": "塑膠",
+        "sentence": "Clue 3: I am a waterproof material. I am used to make some toys and containers. What material am I?",
+        "sentence_zh": "線索 3：我是一種防水的材料。我被用來製造一些玩具和容器。我是什麼材料呢？"
+    },
+    {
+        "word": "glass",
+        "translation": "玻璃",
+        "sentence": "Clue 4: I am made from sand. I am see-through and used to make windows. What material am I?",
+        "sentence_zh": "線索 4：我是用沙子做成的。我是透明的，常被用來做窗戶。我是什麼材料呢？"
+    },
+    {
+        "word": "waterproof",
+        "translation": "防水的",
+        "sentence": "Ella can tell that the box is made of a waterproof material if the table is still dry and the box does not let water through.",
+        "sentence_zh": "如果桌子依然是乾的，而且盒子不讓水漏出去，Ella 就可以判斷這個盒子是由防水材料做成的。"
+    }
+
+
 ]
         
 
