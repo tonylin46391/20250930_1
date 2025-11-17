@@ -8,115 +8,115 @@ import os  # 用來讀取本地 mp3 檔案
 # 📌 題庫 (單字 + 例句 + 中文翻譯)
 word_bank = [
     {"word": "close", "translation": "關上；合上（動詞）",
-     "sentence": "Please ??? the door.",
+     "sentence": "Please close the door.",
      "sentence_zh": "請把門關上。"},
 
     {"word": "cold", "translation": "冷的",
-     "sentence": "The water is ???.",
+     "sentence": "The water is cold.",
      "sentence_zh": "水很冷。"},
 
     {"word": "come", "translation": "來；過來",
-     "sentence": "Please ??? here.",
+     "sentence": "Please come here.",
      "sentence_zh": "請到這裡來。"},
 
     {"word": "done", "translation": "完成了",
-     "sentence": "I am ??? with my homework.",
+     "sentence": "I am done with my homework.",
      "sentence_zh": "我的作業做完了。"},
 
     {"word": "fire", "translation": "火；火焰",
-     "sentence": "The ??? kept us warm.",
+     "sentence": "The fire kept us warm.",
      "sentence_zh": "火讓我們保持溫暖。"},
 
     {"word": "front", "translation": "前面",
-     "sentence": "She stood in ??? of the class.",
+     "sentence": "She stood in front of the class.",
      "sentence_zh": "她站在班級前面。"},
 
     {"word": "life", "translation": "生活；生命",
-     "sentence": "??? is full of surprises.",
+     "sentence": "life is full of surprises.",
      "sentence_zh": "生活充滿驚喜。"},
 
     {"word": "name", "translation": "名字",
-     "sentence": "What is your ????",
+     "sentence": "What is your name"",
      "sentence_zh": "你叫什麼名字？"},
 
     {"word": "small", "translation": "小的",
-     "sentence": "This is a ??? cat.",
+     "sentence": "This is a small cat.",
      "sentence_zh": "這是一隻小貓。"},
 
     {"word": "times", "translation": "次數；倍",
-     "sentence": "I read the book three ???.",
+     "sentence": "I read the book three times.",
      "sentence_zh": "我把這本書讀了三次。"},
 
     {"word": "doze", "translation": "打盹；小睡",
-     "sentence": "He began to ??? on the bus.",
+     "sentence": "He began to doze on the bus.",
      "sentence_zh": "他在公車上開始打盹。"},
 
     {"word": "nose", "translation": "鼻子",
-     "sentence": "My ??? is itchy.",
+     "sentence": "My nose is itchy.",
      "sentence_zh": "我的鼻子很癢。"},
 
     {"word": "use", "translation": "使用",
-     "sentence": "We ??? pencils in class.",
+     "sentence": "We use pencils in class.",
      "sentence_zh": "我們在課堂上使用鉛筆。"},
 
     {"word": "rose", "translation": "玫瑰；玫瑰花",
-     "sentence": "The ??? smells sweet.",
+     "sentence": "The rose smells sweet.",
      "sentence_zh": "這朵玫瑰聞起來很香。"},
 
     {"word": "pole", "translation": "竿；柱；桿子",
-     "sentence": "The flag hangs on the ???.",
+     "sentence": "The flag hangs on the pole.",
      "sentence_zh": "旗子掛在旗桿上。"},
 
     {"word": "close", "translation": "親近的；接近的（形容詞）",
-     "sentence": "We are ??? friends.",
+     "sentence": "We are close friends.",
      "sentence_zh": "我們是要好的朋友。"},
 
     {"word": "June", "translation": "六月",
-     "sentence": "School ends in ???.",
+     "sentence": "School ends in June.",
      "sentence_zh": "學校在六月結束學期。"},
 
     {"word": "woke", "translation": "醒來（wake 的過去式）",
-     "sentence": "She ??? up early.",
+     "sentence": "She woke up early.",
      "sentence_zh": "她很早就醒來了。"},
 
     {"word": "rule", "translation": "規則；規定",
-     "sentence": "Please follow the ???.",
+     "sentence": "Please follow the rule.",
      "sentence_zh": "請遵守規則。"},
 
     {"word": "rode", "translation": "騎（ride 的過去式）",
-     "sentence": "He ??? his bike to school.",
+     "sentence": "He rode his bike to school.",
      "sentence_zh": "他騎腳踏車去上學。"},
 
     {"word": "role", "translation": "角色",
-     "sentence": "He played the ??? of a king.",
+     "sentence": "He played the role of a king.",
      "sentence_zh": "他扮演國王的角色。"},
 
     {"word": "tune", "translation": "曲調；旋律",
-     "sentence": "I like this ???.",
+     "sentence": "I like this tune.",
      "sentence_zh": "我喜歡這首旋律。"},
 
     {"word": "hum", "translation": "哼唱",
-     "sentence": "She likes to ??? songs.",
+     "sentence": "She likes to hum songs.",
      "sentence_zh": "她喜歡哼唱歌曲。"},
 
     {"word": "shut", "translation": "關上；闔上",
-     "sentence": "??? the window, please.",
+     "sentence": "shut the window, please.",
      "sentence_zh": "請把窗戶關上。"},
 
     {"word": "frog", "translation": "青蛙",
-     "sentence": "The ??? jumped into the pond.",
+     "sentence": "The frog jumped into the pond.",
      "sentence_zh": "那隻青蛙跳進池塘裡。"},
 
     {"word": "job", "translation": "工作；職業",
-     "sentence": "He found a new ???.",
+     "sentence": "He found a new job.",
      "sentence_zh": "他找到了一份新工作。"},
 
     {"word": "wrote", "translation": "寫（write 的過去式）",
-     "sentence": "She ??? a letter.",
+     "sentence": "She wrote a letter.",
      "sentence_zh": "她寫了一封信。"},
 
     {"word": "flute", "translation": "長笛",
-     "sentence": "He plays the ??? well.",
+     "sentence": "He plays the flute well.",
      "sentence_zh": "他長笛吹得很好。"}
 ]
 
