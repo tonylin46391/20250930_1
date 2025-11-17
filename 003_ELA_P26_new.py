@@ -1,11 +1,9 @@
 # ----------當錯題時在測試一次對了在能下一題----------------
 
 import streamlit as st
-from gtts import gTTS
-import io
 import datetime
 import pandas as pd
-import os  # ✅ 新增：用來讀取本地 mp3 檔案
+import os  # ✅ 用來讀取本地 mp3 檔案
 
 # 📌 題庫 (單字 + 例句 + 中文翻譯)
 word_bank = [
@@ -128,20 +126,15 @@ translations = {item["word"]: item["translation"] for item in word_bank}
 sentences = {item["word"]: item["sentence"] for item in word_bank}
 sentences_zh = {item["word"]: item["sentence_zh"] for item in word_bank}
 
-# 🔊 本地 mp3 資料夾
-AUDIO_DIR = "audio"
+AUDIO_DIR = "audio"  # 預先下載 mp3 放在這個資料夾
 
-def play_word_audio(word: str):
-    """
-    播放對應單字的本地 mp3 檔案。
-    檔名規則：audio/<單字>.mp3，例如 audio/close.mp3
-    """
-    filename = os.path.join(AUDIO_DIR, f"{word}.mp3")
-    if not os.path.exists(filename):
-        st.warning(f"⚠ 找不到音檔：{filename}")
+def play_audio(filepath: str):
+    """播放本地 mp3，如果檔案不存在就提示警告。"""
+    if not os.path.exists(filepath):
+        st.warning(f"⚠ 找不到音檔：{os.path.basename(filepath)}")
         return
     try:
-        with open(filename, "rb") as f:
+        with open(filepath, "rb") as f:
             audio_bytes = f.read()
         st.audio(audio_bytes, format="audio/mp3")
     except Exception as e:
@@ -157,11 +150,20 @@ if "stats" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# 目前題目
-current_word = words[st.session_state.index]
+# 目前題目（依 index 對應題庫順序）
+current_index = st.session_state.index
+current_word = words[current_index]
 translation = translations[current_word]
 sentence = sentences[current_word]
 sentence_zh = sentences_zh[current_word]
+
+# 對應 make_audio_files.py 的命名規則：XX_word_yyy.mp3
+# base = 01_close / 02_cold / ...
+base_name = f"{current_index + 1:02d}_{current_word}"
+
+word_audio_path   = os.path.join(AUDIO_DIR, f"{base_name}_word_en.mp3")
+sent_en_audio_path = os.path.join(AUDIO_DIR, f"{base_name}_sent_en.mp3")
+sent_zh_audio_path = os.path.join(AUDIO_DIR, f"{base_name}_sent_zh.mp3")
 
 # --- 標題縮小 ---
 st.markdown("<p style='font-size:22px'><b>🎧 單字 + 句子 發音練習</b></p>", unsafe_allow_html=True)
@@ -173,43 +175,39 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("▶ 單字（英文）"):
-        # ✅ 改成播放本地 mp3，不再使用 gTTS
-        play_word_audio(current_word)
+        # ✅ 播放預先產生的單字 mp3
+        play_audio(word_audio_path)
 
 with col2:
     if st.button("▶ 例句（英文）"):
-        # 仍使用 gTTS（如果之後也要改成本地 mp3，可以再調整）
-        tts = gTTS(sentence, lang="en")
-        fp = io.BytesIO()
-        tts.write_to_fp(fp)
-        st.audio(fp.getvalue(), format="audio/mp3")
+        # ✅ 播放預先產生的英文例句 mp3（內容已在 make_audio_files.py 中把 ??? 替換為單字）
+        play_audio(sent_en_audio_path)
 
 with col3:
     if st.button("▶ 中文翻譯"):
-        tts = gTTS(sentence_zh, lang="zh-TW")
-        fp = io.BytesIO()
-        tts.write_to_fp(fp)
-        st.audio(fp.getvalue(), format="audio/mp3")
+        # ✅ 播放預先產生的中文句子 mp3
+        play_audio(sent_zh_audio_path)
 
-# 顯示文字 (不顯示英文單字)
+# 顯示文字 (維持原本顯示方式：中文 + 英文句子模板 + 中文翻譯)
 st.write(f"中文單字翻譯：**{translation}**")
 st.write(f"英文例句：*{sentence}*")
 st.write(f"中文翻譯：*{sentence_zh}*")
 
 # --- 單字答題表單 ---
-input_key = f"input_{current_word}_{st.session_state.index}"
+input_key = f"input_{current_word}_{current_index}"
 with st.form(key=f"form_{current_word}", clear_on_submit=False):
     user_input = st.text_input("", key=input_key, autocomplete="off")
     submitted = st.form_submit_button("提交答案")
     if submitted:
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if user_input.strip().lower() == current_word.lower():
+        is_correct = (user_input.strip().lower() == current_word.lower())
+
+        if is_correct:
             st.session_state.stats[current_word]["正確"] += 1
             st.success("✅ 答對了！")
             st.session_state.answered[current_word] = True
         else:
             st.session_state.stats[current_word]["錯誤"] += 1
-            # ❌ 答錯時顯示正確答案
             st.error(f"❌ 答錯！正確答案是：**{current_word}**")
             st.session_state.answered[current_word] = False
         
@@ -217,7 +215,7 @@ with st.form(key=f"form_{current_word}", clear_on_submit=False):
         st.session_state.history.append({
             "單字": current_word,
             "學生輸入答案": user_input,
-            "結果": "正確" if user_input.strip().lower()==current_word.lower() else "錯誤",
+            "結果": "正確" if is_correct else "錯誤",
             "正確答案": current_word,
             "時間": now_str
         })
