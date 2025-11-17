@@ -36,7 +36,7 @@ word_bank = [
      "sentence_zh": "生活充滿驚喜。"},
 
     {"word": "name", "translation": "名字",
-     "sentence": "What is your name"",
+     "sentence": "What is your "name",
      "sentence_zh": "你叫什麼名字？"},
 
     {"word": "small", "translation": "小的",
