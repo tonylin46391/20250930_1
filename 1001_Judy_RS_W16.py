@@ -287,8 +287,8 @@ else:
     if display_progress == total_questions: display_progress = 0
     st.info(f"📖 順序學習模式 (進度 {display_progress + 1} / {total_questions})")
 
-st.markdown("<p style='font-size:18px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
-st.markdown("<p style='font-size:18px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
+#st.markdown("<p style='font-size:18px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
+#st.markdown("<p style='font-size:18px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
 
 # --- 發音按鈕 (使用 set_gtts_to_play) ---
 col1, col2, col3, col4, col5 = st.columns(5) 
@@ -311,10 +311,10 @@ with col3:
 
 # 顯示文字 (保持不變)
 st.write(f"中文單字翻譯：**{translation}**")
-st.write(f"英文例句：*{sentence}*")
-st.write(f"中文翻譯：*{sentence_zh}*")
+st.write(f"**英文例句：** *{sentence}*")
+st.write(f"**中文翻譯：** *{sentence_zh}*")
 st.markdown(f"**英文定義：** *{definition}*") 
-st.write(f"中文定義：*{definition_zh}*") 
+st.write(f"**中文定義：** *{definition_zh}*") 
 
 
 # --- 單字答題表單 ---
