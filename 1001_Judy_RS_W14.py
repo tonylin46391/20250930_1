@@ -8,7 +8,6 @@ import pandas as pd
 from gtts import gTTS
 import io
 
-
 word_bank = [
     {
         "word": "mysterious",
