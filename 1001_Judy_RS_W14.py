@@ -245,7 +245,7 @@ with col2:
 #    if st.button("▶ 例句（中）"):
 #        # 呼叫 gTTS 播放中文例句 (中文 'zh-tw')
 #        play_audio_gtts(sentence_zh, 'zh-tw')
-with col4: # 英文定義按鈕
+with col3: # 英文定義按鈕
     if st.button("▶ 定義（英）"):
         # 呼叫 gTTS 播放英文定義 (英文 'en')
         play_audio_gtts(definition, 'en')
