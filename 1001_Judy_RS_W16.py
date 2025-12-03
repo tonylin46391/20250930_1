@@ -92,6 +92,7 @@ word_bank = [
 ]
 
 
+
 # 移除所有關於本地音檔路徑和檔案讀取的程式碼
 
 def play_audio_gtts(text: str, lang: str):
