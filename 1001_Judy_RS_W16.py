@@ -204,19 +204,38 @@ definition_zh = current_item.get("definition_zh", "N/A")
 # --- 標題與狀態顯示 ---
 st.markdown("<p style='font-size:22px'><b>🎧 單字 + 句子 發音練習</b></p>", unsafe_allow_html=True)
 
+
 # 顯示最新的結果訊息
 if st.session_state.last_message:
-    # 判斷訊息類型並用不同顏色顯示
-    if "答對了" in st.session_state.last_message or "複習完畢" in st.session_state.last_message or "全部答對" in st.session_state.last_message:
-        st.success(st.session_state.last_message)
-    elif "答錯" in st.session_state.last_message or "跳過" in st.session_state.last_message:
-        # 使用 st.error 模擬您的圖片效果 (帶有紅X)
-        st.error(st.session_state.last_message)
-    else:
-        st.info(st.session_state.last_message)
+    message = st.session_state.last_message
+    
+    # 定義我們想要放大的字體大小 (例如：24px)
+    font_size = "24px" 
+    
+    # 判斷訊息類型並用不同顏色和圖示顯示
+    if "答對了" in message or "複習完畢" in message or "全部答對" in message:
+        # ...
+        html_content = f"""
+        <div style="background-color: #e6ffed; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #090; color: #000;">
+            <span style="font-size: {font_size};">✅ {message} </span>
+        </div>
+        """
+        st.markdown(html_content, unsafe_allow_html=True)
+        
+    elif "答錯" in message or "跳過" in message:
+        # ...
+        html_content = f"""
+        <div style="background-color: #ffeaea; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #f00; color: #000;">
+            <span style="font-size: {font_size};">❌ {message} </span>
+        </div>
+        """
+        st.markdown(html_content, unsafe_allow_html=True)
+
+    # ...
     
     # 確保訊息在顯示後被清除，避免重複顯示
-    st.session_state.last_message = "" 
+    st.session_state.last_message = ""
+
 
 
 if st.session_state.study_mode == 'REVIEW':
@@ -227,8 +246,8 @@ else:
     st.info(f"📖 順序學習模式 (進度 {display_progress + 1} / {total_questions})")
 
 # 更新按鈕標題，包含定義
-st.markdown("<p style='font-size:18px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
-st.markdown("<p style='font-size:18px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
+#st.markdown("<p style='font-size:11px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size:16px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
 
 # --- 五個發音按鈕 (使用 gTTS 替換 play_audio) ---
 col1, col2, col3, col4, col5 = st.columns(5) 
@@ -278,22 +297,22 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
         
         if is_correct:
             st.session_state.stats[current_index]["正確"] += 1
-            st.session_state.last_message = "✅ 答對了！" # 儲存正確訊息
+            # *** 變更點 1: 移除 ✅ 符號 ***
+            st.session_state.last_message = "答對了！" 
             if current_index in st.session_state.wrong_queue:
-                st.session_state.wrong_queue.remove(current_index) # 答對後移出錯題隊列
+                st.session_state.wrong_queue.remove(current_index) 
         else:
             st.session_state.stats[current_index]["錯誤"] += 1
-            msg = f"❌ 答錯！正確答案是：{current_word}" if user_text else f"⏭️ 跳過！正確答案是：{current_word}"
-            st.session_state.last_message = msg # 儲存錯誤訊息
+            # *** 變更點 2: 移除 ❌ 或 ⏭️ 符號 ***
+            # 使用我們在 HTML 中會用到的純文字部分
+            msg = f"答錯！正確答案是：{current_word}" if user_text else f"跳過！正確答案是：{current_word}"
+            st.session_state.last_message = msg 
             
             if current_index not in st.session_state.wrong_queue:
-                st.session_state.wrong_queue.append(current_index) # 答錯後加入錯題隊列
-            
-            if st.session_state.study_mode == 'REVIEW' and current_index in st.session_state.wrong_queue:
-                if st.session_state.wrong_queue[0] == current_index:
-                    item = st.session_state.wrong_queue.pop(0)
-                    st.session_state.wrong_queue.append(item)
-
+                st.session_state.wrong_queue.append(current_index)
+                         
+        
+    
 
         # 紀錄歷史
         st.session_state.history.append({
