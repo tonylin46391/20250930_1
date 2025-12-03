@@ -1,9 +1,8 @@
 import streamlit as st
 import datetime
 import pandas as pd
-# 移除 os 函式庫，因為不再讀取本地檔案
-# import os 
-
+# 引入 os 用來檢查本地音檔路徑
+import os 
 # 引入 gTTS 來生成語音，以及 io 來處理音訊數據流
 from gtts import gTTS
 import io
@@ -91,39 +90,68 @@ word_bank = [
     }
 ]
 
+# --- 播放函式 (處理本地檔案) ---
 
-
-
-
-# 移除所有關於本地音檔路徑和檔案讀取的程式碼
-
-def play_audio_gtts(text: str, lang: str):
+def play_local_audio(filename: str):
     """
-    使用 gTTS 生成 MP3 音訊並直接在 Streamlit 中播放。
-    音訊內容儲存在 BytesIO 中，不產生實體檔案。
+    播放本地上傳的音訊檔案，利用 Streamlit 的 st.audio。
     """
-    if not text:
-        st.warning("⚠ 播放內容為空，無法生成語音。")
+    if not os.path.exists(filename):
+        st.warning(f"⚠ 找不到音訊檔案：'{filename}'，請確認檔案是否存在。")
         return
-        
+    
     try:
-        # 1. 產生 gTTS 物件
-        tts = gTTS(text=text, lang=lang)
+        # 讀取檔案為 bytes 並讓 Streamlit 播放
+        audio_bytes = open(filename, 'rb').read()
+        # 加上 autoplay=True 使其在頁面加載時自動播放
         
-        # 2. 使用 BytesIO 儲存生成的音訊
-        fp = io.BytesIO()
-        tts.write_to_fp(fp)
-        fp.seek(0)
-        
-        # 3. 在 Streamlit 中播放
-        st.audio(fp, format="audio/mp3")
+        # 使用 st.empty() 容器來避免佔用頁面佈局
+        placeholder = st.empty()
+        with placeholder:
+            st.audio(audio_bytes, format='audio/mp3', autoplay=True)
+            
     except Exception as e:
-        st.error(f"生成語音時發生錯誤：{e}")
+        st.error(f"播放本地音訊時發生錯誤：{e}")
+
+
+# --- 播放函式 (處理 gTTS) ---
+
+def set_gtts_to_play(text: str, lang: str):
+    """
+    將要播放的 gTTS 內容儲存到 Session State 中，並觸發重新執行。
+    """
+    if text:
+        st.session_state.gtts_to_play = (text, lang)
+        st.rerun() # 立即重新執行，在頁面頂部播放
+    else:
+        st.warning("⚠ 播放內容為空，無法生成語音。")
+        
+def centralized_gtts_playback():
+    """
+    在頁面頂部集中處理 gTTS 音訊播放。
+    """
+    if st.session_state.gtts_to_play is not None:
+        text, lang = st.session_state.gtts_to_play
+        st.session_state.gtts_to_play = None # 播放前清除狀態
+        
+        # 使用 st.empty() 容器，播放器會被渲染在頂部且不影響下方佈局
+        placeholder = st.empty() 
+        
+        try:
+            tts = gTTS(text=text, lang=lang)
+            fp = io.BytesIO()
+            tts.write_to_fp(fp)
+            fp.seek(0)
+            
+            with placeholder:
+                st.audio(fp, format="audio/mp3", autoplay=True)
+            
+        except Exception as e:
+            st.error(f"生成語音時發生錯誤：{e}")
 
 
 # --- 初始化 Session State ---
 total_questions = len(word_bank)
-# 確保 hash 包含新的欄位，讓新的 word_bank 會觸發初始化
 current_word_hash = hash(tuple((item['word'], item.get('definition_zh')) for item in word_bank))
 
 if "word_bank_hash" not in st.session_state or st.session_state.word_bank_hash != current_word_hash:
@@ -134,14 +162,21 @@ if "word_bank_hash" not in st.session_state or st.session_state.word_bank_hash !
     st.session_state.stats = [{"正確": 0, "錯誤": 0} for _ in range(total_questions)]
     st.session_state.history = []
     st.session_state.word_bank_hash = current_word_hash
-    st.session_state.last_message = "" # 用於儲存最新的結果訊息
+    st.session_state.last_message = ""      # 用於儲存最新的結果訊息
+    st.session_state.gtts_to_play = None    # <-- gTTS 播放狀態
+    st.session_state.local_sound_to_play = "" # <-- 本地音效播放狀態
     st.toast("新題庫已載入！")
 else:
-    # 確保 last_message 存在
+    # 確保所有變數都存在
     if "last_message" not in st.session_state:
         st.session_state.last_message = ""
+    if "gtts_to_play" not in st.session_state:
+        st.session_state.gtts_to_play = None
+    if "local_sound_to_play" not in st.session_state:
+        st.session_state.local_sound_to_play = ""
 
-# --- 邏輯控制函式 ---
+
+# --- 邏輯控制函式 (保持不變) ---
 
 def go_next_question():
     """
@@ -163,22 +198,17 @@ def go_next_question():
     # 邏輯 B: 順序學習模式 (Learning Mode)
     elif st.session_state.study_mode == 'LEARNING':
         
-        # 1. 先將游標推進
         st.session_state.sequence_cursor += 1
         
-        # 2. 檢查推進後的游標是否還在範圍內
         if st.session_state.sequence_cursor < total_questions:
-            # 3. 顯示新游標所指向的題目
             st.session_state.current_display_index = st.session_state.sequence_cursor
         
-        # 4. 游標已到達或超過範圍 (一輪結束)
         else:
             # --- 處理一輪結束 ---
             
             if len(st.session_state.wrong_queue) > 0:
                 st.session_state.study_mode = 'REVIEW'
                 st.session_state.last_message = "🔄 一輪結束，進入錯題複習模式！"
-                # 遞迴呼叫自己，讓它立刻抓取第一題錯題
                 go_next_question()
             else:
                 st.session_state.sequence_cursor = 0
@@ -201,26 +231,55 @@ definition = current_item.get("definition", "N/A")
 definition_zh = current_item.get("definition_zh", "N/A") 
 
 
-# 移除所有關於本地音檔路徑的程式碼
-
 # --- 標題與狀態顯示 ---
 st.markdown("<p style='font-size:22px'><b>🎧 單字 + 句子 發音練習</b></p>", unsafe_allow_html=True)
 
+# *** 頁面頂部：集中播放音效 (本地檔案) ***
+if st.session_state.local_sound_to_play:
+    play_local_audio(st.session_state.local_sound_to_play)
+    st.session_state.local_sound_to_play = ""
+
+# *** 頁面頂部：集中播放音效 (gTTS) ***
+centralized_gtts_playback()
+
+
 # 顯示最新的結果訊息
 if st.session_state.last_message:
-    # 判斷訊息類型並用不同顏色顯示
-    if "答對了" in st.session_state.last_message or "複習完畢" in st.session_state.last_message or "全部答對" in st.session_state.last_message:
-        st.success(st.session_state.last_message)
-    elif "答錯" in st.session_state.last_message or "跳過" in st.session_state.last_message:
-        # 使用 st.error 模擬您的圖片效果 (帶有紅X)
-        st.error(st.session_state.last_message)
-    else:
-        st.info(st.session_state.last_message)
+    message = st.session_state.last_message
     
-    # 確保訊息在顯示後被清除，避免重複顯示
-    st.session_state.last_message = "" 
+    font_size = "24px" 
+    
+    if "答對了" in message or "複習完畢" in message or "全部答對" in message: 
+        
+        # 移除訊息中 Streamlit 內建的圖示
+        display_message = message.replace("✅ ", "").replace("🎉 ", "").replace("💯 ", "")
 
+        html_content = f"""
+        <div style="background-color: #e6ffed; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #090; color: #000;">
+            <span style="font-size: {font_size};">✅ {display_message}</span> 
+        </div>
+        """
+        st.markdown(html_content, unsafe_allow_html=True)
+        
+    elif "答錯" in message or "跳過" in message or "🔄" in message:
+        
+        # 移除訊息中 Streamlit 內建的圖示
+        display_message = message.replace("❌ ", "").replace("⏭️ ", "").replace("🔄 ", "")
+        
+        html_content = f"""
+        <div style="background-color: #ffeaea; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #f00; color: #000;">
+            <span style="font-size: {font_size};">❌ {display_message}</span>
+        </div>
+        """
+        st.markdown(html_content, unsafe_allow_html=True)
 
+    else:
+        st.info(message)
+    
+    # 確保訊息在顯示後被清除
+    st.session_state.last_message = ""
+        
+# --- 狀態模式顯示 ---
 if st.session_state.study_mode == 'REVIEW':
     st.warning(f"🔥 錯題複習模式 (剩餘 {len(st.session_state.wrong_queue)} 題)")
 else:
@@ -228,43 +287,37 @@ else:
     if display_progress == total_questions: display_progress = 0
     st.info(f"📖 順序學習模式 (進度 {display_progress + 1} / {total_questions})")
 
-# 更新按鈕標題，包含定義
-st.markdown("<p style='font-size:18px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
-st.markdown("<p style='font-size:18px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
+#st.markdown("<p style='font-size:18px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
+#st.markdown("<p style='font-size:18px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
 
-# --- 五個發音按鈕 (使用 gTTS 替換 play_audio) ---
+# --- 發音按鈕 (使用 set_gtts_to_play) ---
 col1, col2, col3, col4, col5 = st.columns(5) 
 with col1:
     if st.button("▶ 單字（英）"):
-        # 呼叫 gTTS 播放單字 (英文 'en')
-        play_audio_gtts(current_word, 'en')
+        set_gtts_to_play(current_word, 'en')
 with col2:
     if st.button("▶ 例句（英）"):
-        # 呼叫 gTTS 播放英文例句 (英文 'en')
-        play_audio_gtts(sentence, 'en')
+        set_gtts_to_play(sentence, 'en')
 #with col3:
 #    if st.button("▶ 例句（中）"):
-#        # 呼叫 gTTS 播放中文例句 (中文 'zh-tw')
-#        play_audio_gtts(sentence_zh, 'zh-tw')
-with col3: # 英文定義按鈕
+#        set_gtts_to_play(sentence_zh, 'zh-tw')
+with col3: 
     if st.button("▶ 定義（英）"):
-        # 呼叫 gTTS 播放英文定義 (英文 'en')
-        play_audio_gtts(definition, 'en')
-#with col5: # 中文定義按鈕
+        set_gtts_to_play(definition, 'en')
+#with col5: 
 #    if st.button("▶ 定義（中）"):
-#        # 呼叫 gTTS 播放中文定義 (中文 'zh-tw')
-#        play_audio_gtts(definition_zh, 'zh-tw')
+#        set_gtts_to_play(definition_zh, 'zh-tw')
 
 
-# 顯示文字
+# 顯示文字 (保持不變)
 st.write(f"中文單字翻譯：**{translation}**")
-st.write(f"英文例句：*{sentence}*")
-st.write(f"中文翻譯：*{sentence_zh}*")
+st.write(f"**英文例句：** *{sentence}*")
+st.write(f"**中文翻譯：** *{sentence_zh}*")
 st.markdown(f"**英文定義：** *{definition}*") 
-st.write(f"中文定義：*{definition_zh}*") 
+st.write(f"**中文定義：** *{definition_zh}*") 
 
 
-# --- 單字答題表單 (此處不變) ---
+# --- 單字答題表單 ---
 input_key = f"input_{current_index}_{st.session_state.study_mode}" 
 
 with st.form(key=f"form_{current_index}", clear_on_submit=True):
@@ -280,21 +333,34 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
         
         if is_correct:
             st.session_state.stats[current_index]["正確"] += 1
-            st.session_state.last_message = "✅ 答對了！" # 儲存正確訊息
+            st.session_state.last_message = "✅ 答對了！" 
             if current_index in st.session_state.wrong_queue:
-                st.session_state.wrong_queue.remove(current_index) # 答對後移出錯題隊列
+                st.session_state.wrong_queue.remove(current_index) 
+            
+            # *** 設定正確音效路徑 (本地音效) ***
+            st.session_state.local_sound_to_play = "audio/duolingo_style_correct.mp3" 
+            
+            # 立即跳下一題 (無延遲)
+            go_next_question()
+
         else:
             st.session_state.stats[current_index]["錯誤"] += 1
             msg = f"❌ 答錯！正確答案是：{current_word}" if user_text else f"⏭️ 跳過！正確答案是：{current_word}"
-            st.session_state.last_message = msg # 儲存錯誤訊息
+            st.session_state.last_message = msg 
             
             if current_index not in st.session_state.wrong_queue:
-                st.session_state.wrong_queue.append(current_index) # 答錯後加入錯題隊列
+                st.session_state.wrong_queue.append(current_index) 
             
             if st.session_state.study_mode == 'REVIEW' and current_index in st.session_state.wrong_queue:
                 if st.session_state.wrong_queue[0] == current_index:
                     item = st.session_state.wrong_queue.pop(0)
                     st.session_state.wrong_queue.append(item)
+            
+            # *** 設定錯誤音效路徑 (本地音效) ***
+            st.session_state.local_sound_to_play = "audio/dong_dong.mp3" 
+
+            # 立即跳下一題 (無延遲)
+            go_next_question()
 
 
         # 紀錄歷史
@@ -307,10 +373,9 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
             "時間": now_str
         })
 
-        go_next_question()
-        st.rerun()
+        st.rerun() # 重新執行腳本
 
-# --- 側邊欄統計 (此處不變) ---
+# --- 側邊欄統計 (保持不變) ---
 st.sidebar.header("📊 練習進度統計")
 st.sidebar.write(f"目前模式：**{st.session_state.study_mode}**")
 st.sidebar.write(f"待複習錯題數：{len(st.session_state.wrong_queue)}")
