@@ -6,6 +6,8 @@ import os
 # 引入 gTTS 來生成語音，以及 io 來處理音訊數據流
 from gtts import gTTS
 import io
+# 【新增】引入 difflib 進行字串差異比對
+import difflib 
 
 word_bank = [
     {
@@ -150,6 +152,64 @@ def centralized_gtts_playback():
             st.error(f"生成語音時發生錯誤：{e}")
 
 
+# --- 【新增】差異化顯示函式 ---
+def get_diff_html(a: str, b: str) -> str:
+    """
+    使用 difflib.SequenceMatcher 比對兩個單字 'a' (正確答案) 和 'b' (使用者輸入)，
+    並生成帶有顏色標記的 HTML 字串，以實現圖片中的上下比對效果。
+    """
+    # 將兩字串轉為小寫進行比對
+    a = a.lower()
+    b = b.lower()
+    s = difflib.SequenceMatcher(None, a, b)
+    
+    correct_html = ""
+    input_html = ""
+
+    # 遍歷操作碼 (opcodes)
+    for opcode, a_start, a_end, b_start, b_end in s.get_opcodes():
+        sub_a = a[a_start:a_end]
+        sub_b = b[b_start:b_end]
+
+        if opcode == 'equal':
+            # 兩邊相同 (綠色背景: #ddffdd)
+            style = "background-color: #ddffdd"
+            correct_html += f"<span style='{style}'>{sub_a}</span>"
+            input_html += f"<span style='{style}'>{sub_b}</span>"
+        elif opcode == 'delete':
+            # 正確答案有，使用者輸入刪了 (正確答案標紅: #ffdddd)
+            style = "background-color: #ffdddd"
+            correct_html += f"<span style='{style}'>{sub_a}</span>"
+            # 使用者輸入在這裡沒有對應的字元，所以留空
+        elif opcode == 'insert':
+            # 正確答案沒有，使用者輸入新增了 (使用者輸入標灰: #eeeeee)
+            style = "background-color: #eeeeee"
+            input_html += f"<span style='{style}'>{sub_b}</span>"
+            # 正確答案在這裡沒有對應的字元，所以留空
+        elif opcode == 'replace':
+            # 兩邊發生替換
+            # 正確答案中被替換的部分 (標紅: #ffdddd)
+            style_a = "background-color: #ffdddd"
+            correct_html += f"<span style='{style_a}'>{sub_a}</span>"
+            # 使用者輸入中替換進來的部分 (標灰: #eeeeee)
+            style_b = "background-color: #eeeeee"
+            input_html += f"<span style='{style_b}'>{sub_b}</span>"
+
+    # 包裝成帶有居中和字體大小的 div，模擬圖片效果
+    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 40px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
+    
+    final_html = f"""
+    <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
+        <div style='{style}'>{correct_html}</div>
+        <div style='font-size: 20px; line-height: 1.5; margin: 5px 0;'>⬇️</div>
+        <div style='{style}'>{input_html}</div>
+    </div>
+    """
+    
+    return final_html
+# ----------------------------------------
+
+
 # --- 初始化 Session State ---
 total_questions = len(word_bank)
 current_word_hash = hash(tuple((item['word'], item.get('definition_zh')) for item in word_bank))
@@ -249,7 +309,31 @@ if st.session_state.last_message:
     
     font_size = "24px" 
     
-    if "答對了" in message or "複習完畢" in message or "全部答對" in message: 
+    # --- 【修改】處理差異化 HTML 顯示 ---
+    if message.startswith("HTML_DIFF_START") and message.endswith("HTML_DIFF_END"):
+        
+        # 提取前綴訊息和 HTML 內容
+        content = message[len("HTML_DIFF_START"):-len("HTML_DIFF_END")]
+        
+        # 以差異 HTML 的開頭作為分隔
+        parts = content.split('<div style=\'text-align: center') 
+        prefix_message = parts[0]
+        diff_html_content = '<div style=\'text-align: center' + parts[1] # 重新組合 HTML
+        
+        # 移除訊息中 Streamlit 內建的圖示
+        display_message = prefix_message.replace("❌ ", "").replace("⏭️ ", "").replace("🔄 ", "")
+        
+        # 創建完整的 HTML 內容，結合錯誤提示框和差異化顯示
+        html_content = f"""
+        <div style="background-color: #ffeaea; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #f00; color: #000;">
+            <span style="font-size: {font_size};">❌ {display_message}</span>
+            {diff_html_content} 
+        </div>
+        """
+        st.markdown(html_content, unsafe_allow_html=True)
+    # --------------------------------------
+
+    elif "答對了" in message or "複習完畢" in message or "全部答對" in message: 
         
         # 移除訊息中 Streamlit 內建的圖示
         display_message = message.replace("✅ ", "").replace("🎉 ", "").replace("💯 ", "")
@@ -345,9 +429,17 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
 
         else:
             st.session_state.stats[current_index]["錯誤"] += 1
-            msg = f"❌ 答錯！正確答案是：{current_word}" if user_text else f"⏭️ 跳過！正確答案是：{current_word}"
-            st.session_state.last_message = msg 
             
+            # --- 【修改】加入差異化顯示 ---
+            # 1. 計算並取得差異 HTML 內容
+            diff_html = get_diff_html(current_word, user_text)
+            
+            # 2. 準備顯示訊息 (將差異 HTML 儲存到 last_message)
+            # 使用一個特殊的標籤來指示結果顯示區域需要渲染 HTML
+            msg_prefix = f"❌ 答錯！正確答案是：**{current_word}** (你的輸入：**{user_text}**)" if user_text else f"⏭️ 跳過！正確答案是：**{current_word}**"
+            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}{diff_html}HTML_DIFF_END"
+            # --------------------------------
+
             if current_index not in st.session_state.wrong_queue:
                 st.session_state.wrong_queue.append(current_index) 
             
