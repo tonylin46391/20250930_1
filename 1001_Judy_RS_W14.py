@@ -194,7 +194,7 @@ def get_diff_html(a: str, b: str) -> str:
             input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
 
     # 包裝成帶有居中和字體大小的 div，模擬圖片效果
-    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 28px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
+    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 22px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
     
     final_html = f"""
     <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
