@@ -151,8 +151,7 @@ def centralized_gtts_playback():
         except Exception as e:
             st.error(f"生成語音時發生錯誤：{e}")
 
-
-# --- 【新增】差異化顯示函式 ---
+# --- 【修改】差異化顯示函式 (已調整字體大小與錯誤顏色) ---
 def get_diff_html(a: str, b: str) -> str:
     """
     使用 difflib.SequenceMatcher 比對兩個單字 'a' (正確答案) 和 'b' (使用者輸入)，
@@ -166,37 +165,36 @@ def get_diff_html(a: str, b: str) -> str:
     correct_html = ""
     input_html = ""
 
+    # 🌟 修改點: 使用您指定的深紅色 #b22222 (FireBrick)
+    RED_BG = "background-color: #b22222; color: #ffffff" # **注意：深紅色背景建議搭配白色字體 #ffffff 確保可讀性**
+    GREEN_BG = "background-color: #ddffdd" # 綠色保持不變，表示正確
+
     # 遍歷操作碼 (opcodes)
     for opcode, a_start, a_end, b_start, b_end in s.get_opcodes():
         sub_a = a[a_start:a_end]
         sub_b = b[b_start:b_end]
 
         if opcode == 'equal':
-            # 兩邊相同 (綠色背景: #ddffdd)
-            style = "background-color: #ddffdd"
-            correct_html += f"<span style='{style}'>{sub_a}</span>"
-            input_html += f"<span style='{style}'>{sub_b}</span>"
+            # 兩邊相同 (綠色背景)
+            correct_html += f"<span style='{GREEN_BG}'>{sub_a}</span>"
+            input_html += f"<span style='{GREEN_BG}'>{sub_b}</span>"
         elif opcode == 'delete':
-            # 正確答案有，使用者輸入刪了 (正確答案標紅: #ffdddd)
-            style = "background-color: #ffdddd"
-            correct_html += f"<span style='{style}'>{sub_a}</span>"
+            # 正確答案有，使用者輸入刪了 (正確答案標深紅色)
+            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
             # 使用者輸入在這裡沒有對應的字元，所以留空
         elif opcode == 'insert':
-            # 正確答案沒有，使用者輸入新增了 (使用者輸入標灰: #eeeeee)
-            style = "background-color: #eeeeee"
-            input_html += f"<span style='{style}'>{sub_b}</span>"
+            # 正確答案沒有，使用者輸入新增了 (使用者輸入標深紅色)
+            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
             # 正確答案在這裡沒有對應的字元，所以留空
         elif opcode == 'replace':
             # 兩邊發生替換
-            # 正確答案中被替換的部分 (標紅: #ffdddd)
-            style_a = "background-color: #ffdddd"
-            correct_html += f"<span style='{style_a}'>{sub_a}</span>"
-            # 使用者輸入中替換進來的部分 (標灰: #eeeeee)
-            style_b = "background-color: #eeeeee"
-            input_html += f"<span style='{style_b}'>{sub_b}</span>"
+            # 正確答案中被替換的部分 (標深紅色)
+            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
+            # 使用者輸入中替換進來的部分 (標深紅色)
+            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
 
     # 包裝成帶有居中和字體大小的 div，模擬圖片效果
-    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 40px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
+    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 28px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
     
     final_html = f"""
     <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
@@ -208,8 +206,6 @@ def get_diff_html(a: str, b: str) -> str:
     
     return final_html
 # ----------------------------------------
-
-
 # --- 初始化 Session State ---
 total_questions = len(word_bank)
 current_word_hash = hash(tuple((item['word'], item.get('definition_zh')) for item in word_bank))
