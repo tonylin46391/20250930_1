@@ -194,7 +194,7 @@ def get_diff_html(a: str, b: str) -> str:
             input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
 
     # 包裝成帶有居中和字體大小的 div，模擬圖片效果
-    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 22px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
+    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 26px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
     
     final_html = f"""
     <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
@@ -303,7 +303,7 @@ centralized_gtts_playback()
 if st.session_state.last_message:
     message = st.session_state.last_message
     
-    font_size = "24px" 
+    font_size = "13px" 
     
     # --- 【修改】處理差異化 HTML 顯示 ---
     if message.startswith("HTML_DIFF_START") and message.endswith("HTML_DIFF_END"):
