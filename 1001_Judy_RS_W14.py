@@ -173,7 +173,7 @@ def get_diff_html(a: str, b: str) -> str:
     def span(text, style):
         # 設置固定寬度 (30px) 和等寬字體 (monospace) 確保對齊
         # 字體大小調整為 24px，與 box 尺寸搭配
-        return f"<span style='{style}display:inline-block;width:20px;height:25px;line-height:23px;margin:1px;border-radius:4px;font-family:monospace;text-align:center;font-size:36px;'>{text}</span>"
+        return f"<span style='{style}display:inline-block;width:20px;height:27px;line-height:23px;margin:1px;border-radius:4px;font-family:monospace;text-align:center;font-size:36px;'>{text}</span>"
 
     for opcode, a1, a2, b1, b2 in s.get_opcodes():
         A = a[a1:a2]
