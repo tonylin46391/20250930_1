@@ -151,61 +151,71 @@ def centralized_gtts_playback():
         except Exception as e:
             st.error(f"生成語音時發生錯誤：{e}")
 
-# --- 【修改】差異化顯示函式 (已調整字體大小與錯誤顏色) ---
+
+# --- 【修正 1】差異化顯示函式 (字元精確對齊) ---
 def get_diff_html(a: str, b: str) -> str:
     """
-    使用 difflib.SequenceMatcher 比對兩個單字 'a' (正確答案) 和 'b' (使用者輸入)，
-    並生成帶有顏色標記的 HTML 字串，以實現圖片中的上下比對效果。
+    使用 difflib.SequenceMatcher 進行字元級比對，
+    並使用固寬的 HTML span 元素實現精確對齊的差異顯示。
     """
-    # 將兩字串轉為小寫進行比對
     a = a.lower()
     b = b.lower()
     s = difflib.SequenceMatcher(None, a, b)
-    
-    correct_html = ""
-    input_html = ""
 
-    # 🌟 修改點: 使用您指定的深紅色 #b22222 (FireBrick)
-    RED_BG = "background-color: #b22222; color: #ffffff" # **注意：深紅色背景建議搭配白色字體 #ffffff 確保可讀性**
-    GREEN_BG = "background-color: #ddffdd" # 綠色保持不變，表示正確
+    correct = []
+    inputed = []
 
-    # 遍歷操作碼 (opcodes)
-    for opcode, a_start, a_end, b_start, b_end in s.get_opcodes():
-        sub_a = a[a_start:a_end]
-        sub_b = b[b_start:b_end]
+    # 定義樣式
+    GREEN = "background:#ddffdd;"
+    RED = "background:#b22222;color:white;"
+    EMPTY = "background:#eeeeee;color:#888;"
 
-        if opcode == 'equal':
-            # 兩邊相同 (綠色背景)
-            correct_html += f"<span style='{GREEN_BG}'>{sub_a}</span>"
-            input_html += f"<span style='{GREEN_BG}'>{sub_b}</span>"
-        elif opcode == 'delete':
-            # 正確答案有，使用者輸入刪了 (正確答案標深紅色)
-            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
-            # 使用者輸入在這裡沒有對應的字元，所以留空
-        elif opcode == 'insert':
-            # 正確答案沒有，使用者輸入新增了 (使用者輸入標深紅色)
-            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
-            # 正確答案在這裡沒有對應的字元，所以留空
-        elif opcode == 'replace':
-            # 兩邊發生替換
-            # 正確答案中被替換的部分 (標深紅色)
-            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
-            # 使用者輸入中替換進來的部分 (標深紅色)
-            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
+    def span(text, style):
+        # 設置固定寬度 (30px) 和等寬字體 (monospace) 確保對齊
+        # 字體大小調整為 24px，與 box 尺寸搭配
+        return f"<span style='{style}display:inline-block;width:20px;height:32px;line-height:27px;margin:1px;border-radius:4px;font-family:monospace;text-align:center;font-size:36px;'>{text}</span>"
 
-    # 包裝成帶有居中和字體大小的 div，模擬圖片效果
-    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 26px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
-    
-    final_html = f"""
-    <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
-        <div style='{style}'>{correct_html}</div>
-        <div style='font-size: 20px; line-height: 1.5; margin: 5px 0;'>⬇️</div>
-        <div style='{style}'>{input_html}</div>
+    for opcode, a1, a2, b1, b2 in s.get_opcodes():
+        A = a[a1:a2]
+        B = b[b1:b2]
+
+        if opcode == "equal":
+            # 相同：兩邊都標綠色
+            for x, y in zip(A, B):
+                correct.append(span(x, GREEN))
+                inputed.append(span(y, GREEN))
+
+        elif opcode == "replace":
+            # 替換：兩邊都標深紅色
+            L = max(len(A), len(B))
+            for i in range(L):
+                ca = A[i] if i < len(A) else "_" # 較短的字串用 '_' 填充
+                cb = B[i] if i < len(B) else "_"
+                correct.append(span(ca, RED))
+                inputed.append(span(cb, RED))
+
+        elif opcode == "delete":
+            # 刪除 (正確答案有，輸入沒有)：正確答案標深紅色，輸入標灰色 '_'
+            for ch in A:
+                correct.append(span(ch, RED))
+                inputed.append(span("_", EMPTY))
+
+        elif opcode == "insert":
+            # 插入 (正確答案沒有，輸入多餘)：正確答案標灰色 '_'，輸入標深紅色
+            for ch in B:
+                correct.append(span("_", EMPTY))
+                inputed.append(span(ch, RED))
+
+    return f"""
+    <div style='text-align:center;margin-top:12px;'>
+        {''.join(correct)}
+        <div style='font-size:22px;margin:6px;'>⬇️</div>
+        {''.join(inputed)}
     </div>
     """
-    
-    return final_html
 # ----------------------------------------
+
+
 # --- 初始化 Session State ---
 total_questions = len(word_bank)
 current_word_hash = hash(tuple((item['word'], item.get('definition_zh')) for item in word_bank))
@@ -303,18 +313,25 @@ centralized_gtts_playback()
 if st.session_state.last_message:
     message = st.session_state.last_message
     
-    font_size = "13px" 
+    font_size = "13px" # 🌟 修正 2: 錯誤提示的字體大小調整為 30px
     
-    # --- 【修改】處理差異化 HTML 顯示 ---
+    # --- 【修正】處理差異化 HTML 顯示 ---
     if message.startswith("HTML_DIFF_START") and message.endswith("HTML_DIFF_END"):
         
         # 提取前綴訊息和 HTML 內容
         content = message[len("HTML_DIFF_START"):-len("HTML_DIFF_END")]
         
-        # 以差異 HTML 的開頭作為分隔
-        parts = content.split('<div style=\'text-align: center') 
-        prefix_message = parts[0]
-        diff_html_content = '<div style=\'text-align: center' + parts[1] # 重新組合 HTML
+        # 🌟 修正點：改用新的明確分隔符號 '|DIFF_SEP|' 來分割前綴訊息和 HTML 內容
+        parts = content.split('|DIFF_SEP|', 1) 
+        
+        # 🌟 修正點：加入長度檢查以避免 Index Error
+        if len(parts) >= 2:
+            prefix_message = parts[0]
+            diff_html_content = parts[1]
+        else:
+            # 如果分割失敗 (意外狀況)，則整個內容都是 prefix，沒有 HTML 差異內容
+            prefix_message = content 
+            diff_html_content = "" 
         
         # 移除訊息中 Streamlit 內建的圖示
         display_message = prefix_message.replace("❌ ", "").replace("⏭️ ", "").replace("🔄 ", "")
@@ -367,9 +384,6 @@ else:
     if display_progress == total_questions: display_progress = 0
     st.info(f"📖 順序學習模式 (進度 {display_progress + 1} / {total_questions})")
 
-#st.markdown("<p style='font-size:18px'>📌 發音按鈕 (單字 / 英文例句 / 中文翻譯 / 英文定義 / 中文定義)</p>", unsafe_allow_html=True)
-#st.markdown("<p style='font-size:18px'>✏️ 單字測驗</p>", unsafe_allow_html=True)
-
 # --- 發音按鈕 (使用 set_gtts_to_play) ---
 col1, col2, col3, col4, col5 = st.columns(5) 
 with col1:
@@ -378,18 +392,10 @@ with col1:
 with col2:
     if st.button("▶ 例句（英）"):
         set_gtts_to_play(sentence, 'en')
-#with col3:
-#    if st.button("▶ 例句（中）"):
-#        set_gtts_to_play(sentence_zh, 'zh-tw')
 with col3: 
     if st.button("▶ 定義（英）"):
         set_gtts_to_play(definition, 'en')
-#with col5: 
-#    if st.button("▶ 定義（中）"):
-#        set_gtts_to_play(definition_zh, 'zh-tw')
-
-
-# 顯示文字 (保持不變)
+# st.markdown 保持不變
 st.write(f"中文單字翻譯：**{translation}**")
 st.write(f"**英文例句：** *{sentence}*")
 st.write(f"**中文翻譯：** *{sentence_zh}*")
@@ -431,9 +437,10 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
             diff_html = get_diff_html(current_word, user_text)
             
             # 2. 準備顯示訊息 (將差異 HTML 儲存到 last_message)
-            # 使用一個特殊的標籤來指示結果顯示區域需要渲染 HTML
             msg_prefix = f"❌ 答錯！正確答案是：**{current_word}** (你的輸入：**{user_text}**)" if user_text else f"⏭️ 跳過！正確答案是：**{current_word}**"
-            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}{diff_html}HTML_DIFF_END"
+            
+            # 🌟 修正點：使用明確的分隔符號 |DIFF_SEP| 儲存訊息，避免 Index Error
+            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}|DIFF_SEP|{diff_html}HTML_DIFF_END"
             # --------------------------------
 
             if current_index not in st.session_state.wrong_queue:
