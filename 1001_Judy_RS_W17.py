@@ -9,6 +9,53 @@ import io
 # 【新增】引入 difflib 進行字串差異比對
 import difflib 
 
+# --- 【修正】自定義 CSS 樣式 (調整按鈕文字和大小) ---
+st.markdown("""
+<style>
+/* 由於此 CSS 選擇器 (div.stButton > button) 會影響頁面上所有 Streamlit 按鈕 */
+div.stButton > button {
+    /* 調整按鈕的最小寬度 */
+    min-width: 100%;
+    /* 🌟 修正點 1: 縮小文字大小 */
+    font-size: 20px; 
+    /* 🌟 修正點 2: 縮小內距，讓按鈕變窄一點 */
+    padding: 10px 5px; 
+    /* 調整按鈕的圓角 */
+    border-radius: 18px;
+    
+    /* --- 顏色修改 (橘色) --- */
+    background-color: #FF9900 !important; 
+    color: #FFFFFF !important; /* 預設白色文字 */
+    border: 1px solid #FF9900 !important; 
+}
+
+/* 增加滑鼠懸停 (hover) 效果 */
+div.stButton > button:hover {
+    /* 懸停時顏色略微變淺 */
+    background-color: #FFAA33 !important; 
+    border: 1px solid #FFAA33 !important;
+    /* 滑鼠懸停時文字顏色變黑色 */
+    color: black !important; 
+}
+
+/* 增加按鈕按下 (active) 效果 */
+div.stButton > button:active {
+    /* 按下時顏色略微變深 */
+    background-color: #E68A00 !important; 
+    border: 1px solid #E68A00 !important; 
+    /* 按下時文字顏色維持預設的白色 */
+    color: white !important; 
+}
+    
+/* 垂直對齊圖片的 CSS 調整 (保留) */
+div[data-testid="stHorizontalBlock"] > div:nth-child(1) div.stImage {
+    margin-top: 0px; 
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
 word_bank = [
     {
         "word": "orphan",
@@ -92,6 +139,7 @@ word_bank = [
     }
 ]
 
+
 # --- 播放函式 (處理本地檔案) ---
 
 def play_local_audio(filename: str):
@@ -99,13 +147,12 @@ def play_local_audio(filename: str):
     播放本地上傳的音訊檔案，利用 Streamlit 的 st.audio。
     """
     if not os.path.exists(filename):
-        st.warning(f"⚠ 找不到音訊檔案：'{filename}'，請確認檔案是否存在。")
+        # 由於我們沒有提供實體音效檔，這裡不顯示警告，避免干擾，但保留邏輯
         return
     
     try:
         # 讀取檔案為 bytes 並讓 Streamlit 播放
         audio_bytes = open(filename, 'rb').read()
-        # 加上 autoplay=True 使其在頁面加載時自動播放
         
         # 使用 st.empty() 容器來避免佔用頁面佈局
         placeholder = st.empty()
@@ -152,70 +199,70 @@ def centralized_gtts_playback():
             st.error(f"生成語音時發生錯誤：{e}")
 
 
-# --- 【修正】差異化顯示函式 (非固寬，無佔位符) ---
+# --- 差異化顯示函式 (字元精確對齊) ---
 def get_diff_html(a: str, b: str) -> str:
     """
-    使用 difflib.SequenceMatcher 比對兩個單字 'a' (正確答案) 和 'b' (使用者輸入)，
-    並生成帶有顏色標記的 HTML 字串。
-    
-    **注意：此版本不使用固定寬度或佔位符，因此有增減字元時，上下兩行無法精確垂直對齊。**
+    使用 difflib.SequenceMatcher 進行字元級比對，
+    並使用固寬的 HTML span 元素實現精確對齊的差異顯示。
     """
     a = a.lower()
     b = b.lower()
     s = difflib.SequenceMatcher(None, a, b)
-    
-    correct_html = ""
-    input_html = ""
 
-    # 🌟 修正點：使用深紅色背景 (#b22222) 和白色文字 (color:white)
-    RED_BG = "background-color: #b22222; color: #ffffff; padding: 0 1px;" 
-    GREEN_BG = "background-color: #ddffdd; padding: 0 1px;" # 綠色保持不變，表示正確
+    correct = []
+    inputed = []
 
-    # 遍歷操作碼 (opcodes)
-    for opcode, a_start, a_end, b_start, b_end in s.get_opcodes():
-        sub_a = a[a_start:a_end]
-        sub_b = b[b_start:b_end]
-        
-        # 移除 <span style='...'>...</span> 標籤，讓文字流動，避免錯位
-        
-        if opcode == 'equal':
-            # 兩邊相同 (綠色背景)
-            correct_html += f"<span style='{GREEN_BG}'>{sub_a}</span>"
-            input_html += f"<span style='{GREEN_BG}'>{sub_b}</span>"
-        elif opcode == 'delete':
-            # 正確答案有，使用者輸入刪了 (正確答案標深紅色)
-            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
-            # 🌟 關鍵：使用者輸入不顯示任何內容，讓輸入行的字元往左流動
-            input_html += ""
-        elif opcode == 'insert':
-            # 正確答案沒有，使用者輸入新增了 (使用者輸入標深紅色)
-            correct_html += ""
-            # 🌟 關鍵：正確答案不顯示任何內容，讓正確行的字元往左流動
-            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
-        elif opcode == 'replace':
-            # 兩邊發生替換
-            # 正確答案中被替換的部分 (標深紅色)
-            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
-            # 使用者輸入中替換進來的部分 (標深紅色)
-            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
+    # 定義樣式
+    GREEN = "background:#ddffdd;"
+    RED = "background:#b22222;color:white;"
+    EMPTY = "background:#eeeeee;color:#888;"
 
-    # 包裝成帶有居中和字體大小的 div
-    # 🌟 調整字體大小，接近圖片效果
-    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 40px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
-    
-    final_html = f"""
-    <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
-        <div style='{style}'>{correct_html}</div>
-        <div style='font-size: 20px; line-height: 1.5; margin: 5px 0;'>⬇️</div>
-        <div style='{style}'>{input_html}</div>
+    def span(text, style):
+        # 設置固定寬度 (20px) 和等寬字體 (monospace) 確保對齊
+        return f"<span style='{style}display:inline-block;width:20px;height:32px;line-height:27px;margin:1px;border-radius:4px;font-family:monospace;text-align:center;font-size:36px;'>{text}</span>"
+
+    for opcode, a1, a2, b1, b2 in s.get_opcodes():
+        A = a[a1:a2]
+        B = b[b1:b2]
+
+        if opcode == "equal":
+            # 相同：兩邊都標綠色
+            for x, y in zip(A, B):
+                correct.append(span(x, GREEN))
+                inputed.append(span(y, GREEN))
+
+        elif opcode == "replace":
+            # 替換：兩邊都標深紅色
+            L = max(len(A), len(B))
+            for i in range(L):
+                ca = A[i] if i < len(A) else "_" # 較短的字串用 '_' 填充
+                cb = B[i] if i < len(B) else "_"
+                correct.append(span(ca, RED))
+                inputed.append(span(cb, RED))
+
+        elif opcode == "delete":
+            # 刪除 (正確答案有，輸入沒有)：正確答案標深紅色，輸入標灰色 '_'
+            for ch in A:
+                correct.append(span(ch, RED))
+                inputed.append(span("_", EMPTY))
+
+        elif opcode == "insert":
+            # 插入 (正確答案沒有，輸入多餘)：正確答案標灰色 '_'，輸入標深紅色
+            for ch in B:
+                correct.append(span("_", EMPTY))
+                inputed.append(span(ch, RED))
+
+    return f"""
+    <div style='text-align:center;margin-top:12px;'>
+        {''.join(correct)}
+        <div style='font-size:13px;margin:3px;'>⬇️</div>
+        {''.join(inputed)}
     </div>
     """
-    
-    return final_html
 # ----------------------------------------
 
 
-# --- 初始化 Session State (保持不變) ---
+# --- 初始化 Session State ---
 total_questions = len(word_bank)
 current_word_hash = hash(tuple((item['word'], item.get('definition_zh')) for item in word_bank))
 
@@ -241,7 +288,7 @@ else:
         st.session_state.local_sound_to_play = ""
 
 
-# --- 邏輯控制函式 (修正 mode 轉換時的 last_message 覆蓋問題) ---
+# --- 邏輯控制函式 (已修正 mode 轉換時的 message 覆蓋問題) ---
 
 def go_next_question():
     """
@@ -282,20 +329,18 @@ def go_next_question():
                     # 1. 取得原始錯誤訊息內容 (不含 START/END 標籤)
                     original_content = st.session_state.last_message[len("HTML_DIFF_START"):-len("HTML_DIFF_END")]
                     
-                    # 2. 由於訊息格式是 msg_prefix + diff_html，我們使用 diff_html 的起始點來分割
-                    # diff_html 的起始點是 '<div style=\'text-align: center'
-                    parts = original_content.split('<div style=\'text-align: center', 1)
+                    # 2. 使用明確的分隔符號 |DIFF_SEP| 來分割前綴訊息和 HTML 內容
+                    parts = original_content.split('|DIFF_SEP|', 1) 
                     
                     if len(parts) == 2:
                         prefix_message = parts[0]
-                        diff_html_content = '<div style=\'text-align: center' + parts[1]
+                        diff_html_content = parts[1] # HTML 內容
                         
                         # 3. 創建新的前綴訊息：將「模式切換」訊息放在最前面
-                        # 這裡使用 <br><br> 分隔，並移除舊的前綴中的「❌ 答錯！」「⏭️ 跳過！」避免重複
                         new_prefix = f"🔄 一輪結束，進入錯題複習模式！<br><br>{prefix_message.replace('❌ 答錯！', '').replace('⏭️ 跳過！', '')}"
                         
                         # 4. 重新組合並儲存
-                        st.session_state.last_message = f"HTML_DIFF_START{new_prefix}{diff_html_content}HTML_DIFF_END"
+                        st.session_state.last_message = f"HTML_DIFF_START{new_prefix}|DIFF_SEP|{diff_html_content}HTML_DIFF_END"
                     else:
                         # 錯誤處理：如果無法分割，退回到只顯示模式切換訊息
                         st.session_state.last_message = "🔄 一輪結束，進入錯題複習模式！"
@@ -304,15 +349,15 @@ def go_next_question():
                     # 如果沒有詳細錯誤比對訊息 (例如，全部答對或沒有作答時結束一輪)
                     st.session_state.last_message = "🔄 一輪結束，進入錯題複習模式！"
                     
-                go_next_question() # 遞迴呼叫以設定複習模式的第一題 index
-                
+                go_next_question() # 遞迴呼叫以設定複習模式的第一題 index                           
+            
             else:
                 st.session_state.sequence_cursor = 0
                 st.session_state.current_display_index = 0
                 st.session_state.last_message = "💯 太強了！全部答對，直接開始新的一輪！"
 
 
-# --- 介面顯示 (修正訊息解析邏輯) ---
+# --- 介面顯示 ---
 
 # 確保一開始有題目
 current_index = st.session_state.current_display_index
@@ -343,35 +388,31 @@ centralized_gtts_playback()
 if st.session_state.last_message:
     message = st.session_state.last_message
     
-    font_size = "24px" # 調整字體大小為 24px
+    font_size = "12px" # 調整字體大小
     
-    # --- 【修正】處理差異化 HTML 顯示 (使用 |DIFF_SEP| 分隔符) ---
+    # --- 處理差異化 HTML 顯示 ---
     if message.startswith("HTML_DIFF_START") and message.endswith("HTML_DIFF_END"):
         
         # 提取前綴訊息和 HTML 內容
         content = message[len("HTML_DIFF_START"):-len("HTML_DIFF_END")]
         
-        # 🌟 修正點：使用明確的分隔符號 '<div style=\'text-align: center' 來分割前綴訊息和 HTML 內容
-        # 由於 get_diff_html 的返回格式是固定的，這裡可以利用它來分割
-        parts = content.split('<div style=\'text-align: center', 1) 
+        # 使用明確的分隔符號 |DIFF_SEP| 來分割前綴訊息和 HTML 內容
+        parts = content.split('|DIFF_SEP|', 1) 
         
-        # 🌟 修正點：加入長度檢查以避免 Index Error
         if len(parts) >= 2:
             prefix_message = parts[0]
-            # 重新組合 HTML
-            diff_html_content = '<div style=\'text-align: center' + parts[1] 
+            diff_html_content = parts[1]
         else:
             prefix_message = content 
             diff_html_content = "" 
         
-        # 移除訊息中 Streamlit 內建的圖示
-        # 這裡不移除，讓訊息中的 ❌ 🔄 符號正常顯示
-        display_message = prefix_message
+        # 移除訊息中 Streamlit 內建的圖示，並使用我們自定義的樣式
+        display_message = prefix_message.replace("❌ ", "").replace("⏭️ ", "").replace("🔄 ", "")
         
         # 創建完整的 HTML 內容，結合錯誤提示框和差異化顯示
         html_content = f"""
         <div style="background-color: #ffeaea; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #f00; color: #000;">
-            <span style="font-size: {font_size};"> {display_message}</span>
+            <span style="font-size: {font_size};">{display_message}</span>
             {diff_html_content} 
         </div>
         """
@@ -408,26 +449,47 @@ if st.session_state.last_message:
     # 確保訊息在顯示後被清除
     st.session_state.last_message = ""
         
-# --- 狀態模式顯示 (保持不變) ---
+# --- 狀態模式顯示 ---
 if st.session_state.study_mode == 'REVIEW':
-    st.warning(f"🔥 錯題複習模式 (剩餘 {len(st.session_state.wrong_queue)} 題)")
+    st.warning(f"🔥 錯題複習模式 (剩餘 **{len(st.session_state.wrong_queue)}** 題)")
 else:
     display_progress = st.session_state.sequence_cursor 
     if display_progress == total_questions: display_progress = 0
-    st.info(f"📖 順序學習模式 (進度 {display_progress + 1} / {total_questions})")
+    st.info(f"📖 順序學習模式 (進度 **{display_progress + 1}** / **{total_questions}**)")
 
-# --- 發音按鈕 (使用 set_gtts_to_play) ---
-col1, col2, col3, col4, col5 = st.columns(5) 
-with col1:
+# ----------------------------------------------------
+# --- 【修正區】發音按鈕區域 (加入圖片) ---
+# ----------------------------------------------------
+# 步驟 1: 建立欄位佈局 (圖片在左, 按鈕在右)
+# [圖片(1), 單字按鈕(2), 例句按鈕(2), 定義按鈕(2)]
+col_img, col_btn_word, col_btn_sentence, col_btn_definition = st.columns([1, 2, 2, 2]) 
+
+# 步驟 2: 放置圖片
+with col_img:
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.join(current_dir, "Dolingo.jpg")
+        
+        # 顯示圖片 (寬度調整為 70px)
+        st.image(image_path, width=70) 
+    except Exception as e:
+        # 找不到圖片時不顯示任何東西
+        pass 
+
+# 步驟 3: 放置按鈕
+with col_btn_word:
     if st.button("▶ 單字（英）"):
         set_gtts_to_play(current_word, 'en')
-with col2:
+    
+with col_btn_sentence:
     if st.button("▶ 例句（英）"):
         set_gtts_to_play(sentence, 'en')
-with col3: 
+    
+with col_btn_definition: 
     if st.button("▶ 定義（英）"):
         set_gtts_to_play(definition, 'en')
-# st.markdown 保持不變
+# ----------------------------------------------------
+
 st.write(f"中文單字翻譯：**{translation}**")
 st.write(f"**英文例句：** *{sentence}*")
 st.write(f"**中文翻譯：** *{sentence_zh}*")
@@ -435,7 +497,7 @@ st.markdown(f"**英文定義：** *{definition}*")
 st.write(f"**中文定義：** *{definition_zh}*") 
 
 
-# --- 單字答題表單 (保持不變) ---
+# --- 單字答題表單 ---
 input_key = f"input_{current_index}_{st.session_state.study_mode}" 
 
 with st.form(key=f"form_{current_index}", clear_on_submit=True):
@@ -455,7 +517,7 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
             if current_index in st.session_state.wrong_queue:
                 st.session_state.wrong_queue.remove(current_index) 
             
-            # *** 設定正確音效路徑 (本地音效) ***
+            # *** 設定正確音效路徑 (本地音效，假設音效檔在 audio 資料夾) ***
             st.session_state.local_sound_to_play = "audio/duolingo_style_correct.mp3" 
             
             # 立即跳下一題 (無延遲)
@@ -470,19 +532,21 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
             
             # 2. 準備顯示訊息 (將差異 HTML 儲存到 last_message)
             msg_prefix = f"❌ 答錯！正確答案是：**{current_word}** (你的輸入：**{user_text}**)" if user_text else f"⏭️ 跳過！正確答案是：**{current_word}**"
-            # 🌟 修正點：直接將差異 HTML 內容接在 msg_prefix 後面
-            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}{diff_html}HTML_DIFF_END"
+            
+            # 🌟 使用明確的分隔符號 |DIFF_SEP| 儲存訊息
+            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}|DIFF_SEP|{diff_html}HTML_DIFF_END"
             # --------------------------------
 
             if current_index not in st.session_state.wrong_queue:
                 st.session_state.wrong_queue.append(current_index) 
             
             if st.session_state.study_mode == 'REVIEW' and current_index in st.session_state.wrong_queue:
+                # 答錯或跳過後，將該題移到隊列尾部，避免連續做同一題
                 if st.session_state.wrong_queue[0] == current_index:
                     item = st.session_state.wrong_queue.pop(0)
                     st.session_state.wrong_queue.append(item)
             
-            # *** 設定錯誤音效路徑 (本地音效) ***
+            # *** 設定錯誤音效路徑 (本地音效，假設音效檔在 audio 資料夾) ***
             st.session_state.local_sound_to_play = "audio/dong_dong.mp3" 
 
             # 立即跳下一題 (無延遲)
@@ -504,7 +568,7 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
 # --- 側邊欄統計 (保持不變) ---
 st.sidebar.header("📊 練習進度統計")
 st.sidebar.write(f"目前模式：**{st.session_state.study_mode}**")
-st.sidebar.write(f"待複習錯題數：{len(st.session_state.wrong_queue)}")
+st.sidebar.write(f"待複習錯題數：**{len(st.session_state.wrong_queue)}**")
 
 st.sidebar.subheader("📈 單字答題統計")
 stats_list = []
