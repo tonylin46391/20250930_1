@@ -91,6 +91,7 @@ word_bank = [
         "definition_zh": "一種巨大的快樂和喜悅的感覺。"
     }
 ]
+
 # --- 播放函式 (處理本地檔案) ---
 
 def play_local_audio(filename: str):
@@ -151,71 +152,70 @@ def centralized_gtts_playback():
             st.error(f"生成語音時發生錯誤：{e}")
 
 
-# --- 【修正 1】差異化顯示函式 (字元精確對齊) ---
+# --- 【修正】差異化顯示函式 (非固寬，無佔位符) ---
 def get_diff_html(a: str, b: str) -> str:
     """
-    使用 difflib.SequenceMatcher 進行字元級比對，
-    並使用固寬的 HTML span 元素實現精確對齊的差異顯示。
+    使用 difflib.SequenceMatcher 比對兩個單字 'a' (正確答案) 和 'b' (使用者輸入)，
+    並生成帶有顏色標記的 HTML 字串。
+    
+    **注意：此版本不使用固定寬度或佔位符，因此有增減字元時，上下兩行無法精確垂直對齊。**
     """
     a = a.lower()
     b = b.lower()
     s = difflib.SequenceMatcher(None, a, b)
+    
+    correct_html = ""
+    input_html = ""
 
-    correct = []
-    inputed = []
+    # 🌟 修正點：使用深紅色背景 (#b22222) 和白色文字 (color:white)
+    RED_BG = "background-color: #b22222; color: #ffffff; padding: 0 1px;" 
+    GREEN_BG = "background-color: #ddffdd; padding: 0 1px;" # 綠色保持不變，表示正確
 
-    # 定義樣式
-    GREEN = "background:#ddffdd;"
-    RED = "background:#b22222;color:white;"
-    EMPTY = "background:#eeeeee;color:#888;"
+    # 遍歷操作碼 (opcodes)
+    for opcode, a_start, a_end, b_start, b_end in s.get_opcodes():
+        sub_a = a[a_start:a_end]
+        sub_b = b[b_start:b_end]
+        
+        # 移除 <span style='...'>...</span> 標籤，讓文字流動，避免錯位
+        
+        if opcode == 'equal':
+            # 兩邊相同 (綠色背景)
+            correct_html += f"<span style='{GREEN_BG}'>{sub_a}</span>"
+            input_html += f"<span style='{GREEN_BG}'>{sub_b}</span>"
+        elif opcode == 'delete':
+            # 正確答案有，使用者輸入刪了 (正確答案標深紅色)
+            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
+            # 🌟 關鍵：使用者輸入不顯示任何內容，讓輸入行的字元往左流動
+            input_html += ""
+        elif opcode == 'insert':
+            # 正確答案沒有，使用者輸入新增了 (使用者輸入標深紅色)
+            correct_html += ""
+            # 🌟 關鍵：正確答案不顯示任何內容，讓正確行的字元往左流動
+            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
+        elif opcode == 'replace':
+            # 兩邊發生替換
+            # 正確答案中被替換的部分 (標深紅色)
+            correct_html += f"<span style='{RED_BG}'>{sub_a}</span>"
+            # 使用者輸入中替換進來的部分 (標深紅色)
+            input_html += f"<span style='{RED_BG}'>{sub_b}</span>"
 
-    def span(text, style):
-        # 設置固定寬度 (30px) 和等寬字體 (monospace) 確保對齊
-        # 字體大小調整為 24px，與 box 尺寸搭配
-        return f"<span style='{style}display:inline-block;width:20px;height:32px;line-height:27px;margin:1px;border-radius:4px;font-family:monospace;text-align:center;font-size:36px;'>{text}</span>"
-
-    for opcode, a1, a2, b1, b2 in s.get_opcodes():
-        A = a[a1:a2]
-        B = b[b1:b2]
-
-        if opcode == "equal":
-            # 相同：兩邊都標綠色
-            for x, y in zip(A, B):
-                correct.append(span(x, GREEN))
-                inputed.append(span(y, GREEN))
-
-        elif opcode == "replace":
-            # 替換：兩邊都標深紅色
-            L = max(len(A), len(B))
-            for i in range(L):
-                ca = A[i] if i < len(A) else "_" # 較短的字串用 '_' 填充
-                cb = B[i] if i < len(B) else "_"
-                correct.append(span(ca, RED))
-                inputed.append(span(cb, RED))
-
-        elif opcode == "delete":
-            # 刪除 (正確答案有，輸入沒有)：正確答案標深紅色，輸入標灰色 '_'
-            for ch in A:
-                correct.append(span(ch, RED))
-                inputed.append(span("_", EMPTY))
-
-        elif opcode == "insert":
-            # 插入 (正確答案沒有，輸入多餘)：正確答案標灰色 '_'，輸入標深紅色
-            for ch in B:
-                correct.append(span("_", EMPTY))
-                inputed.append(span(ch, RED))
-
-    return f"""
-    <div style='text-align:center;margin-top:12px;'>
-        {''.join(correct)}
-        <div style='font-size:22px;margin:6px;'>⬇️</div>
-        {''.join(inputed)}
+    # 包裝成帶有居中和字體大小的 div
+    # 🌟 調整字體大小，接近圖片效果
+    style = "display: inline-block; padding: 2px 0; border-radius: 3px; font-size: 40px; line-height: 1.5; font-family: monospace; letter-spacing: 2px;"
+    
+    final_html = f"""
+    <div style='text-align: center; margin-top: 15px; margin-bottom: 5px;'>
+        <div style='{style}'>{correct_html}</div>
+        <div style='font-size: 20px; line-height: 1.5; margin: 5px 0;'>⬇️</div>
+        <div style='{style}'>{input_html}</div>
     </div>
     """
+    
+    return final_html
 # ----------------------------------------
 
 
-# --- 初始化 Session State ---
+# --- 初始化 Session State (保持不變) ---
 total_questions = len(word_bank)
 current_word_hash = hash(tuple((item['word'], item.get('definition_zh')) for item in word_bank))
 
@@ -241,7 +241,7 @@ else:
         st.session_state.local_sound_to_play = ""
 
 
-# --- 邏輯控制函式 (保持不變) ---
+# --- 邏輯控制函式 (修正 mode 轉換時的 last_message 覆蓋問題) ---
 
 def go_next_question():
     """
@@ -269,19 +269,50 @@ def go_next_question():
             st.session_state.current_display_index = st.session_state.sequence_cursor
         
         else:
-            # --- 處理一輪結束 ---
+            # --- 處理一輪結束 (修正點在此) ---
+            
+            is_error_message_present = st.session_state.last_message.startswith("HTML_DIFF_START")
             
             if len(st.session_state.wrong_queue) > 0:
                 st.session_state.study_mode = 'REVIEW'
-                st.session_state.last_message = "🔄 一輪結束，進入錯題複習模式！"
-                go_next_question()
+                
+                # 🌟 關鍵修正：如果存在詳細錯誤比對訊息，則將模式切換訊息附加到錯誤訊息的前綴部分。
+                if is_error_message_present: 
+                    
+                    # 1. 取得原始錯誤訊息內容 (不含 START/END 標籤)
+                    original_content = st.session_state.last_message[len("HTML_DIFF_START"):-len("HTML_DIFF_END")]
+                    
+                    # 2. 由於訊息格式是 msg_prefix + diff_html，我們使用 diff_html 的起始點來分割
+                    # diff_html 的起始點是 '<div style=\'text-align: center'
+                    parts = original_content.split('<div style=\'text-align: center', 1)
+                    
+                    if len(parts) == 2:
+                        prefix_message = parts[0]
+                        diff_html_content = '<div style=\'text-align: center' + parts[1]
+                        
+                        # 3. 創建新的前綴訊息：將「模式切換」訊息放在最前面
+                        # 這裡使用 <br><br> 分隔，並移除舊的前綴中的「❌ 答錯！」「⏭️ 跳過！」避免重複
+                        new_prefix = f"🔄 一輪結束，進入錯題複習模式！<br><br>{prefix_message.replace('❌ 答錯！', '').replace('⏭️ 跳過！', '')}"
+                        
+                        # 4. 重新組合並儲存
+                        st.session_state.last_message = f"HTML_DIFF_START{new_prefix}{diff_html_content}HTML_DIFF_END"
+                    else:
+                        # 錯誤處理：如果無法分割，退回到只顯示模式切換訊息
+                        st.session_state.last_message = "🔄 一輪結束，進入錯題複習模式！"
+                        
+                else:
+                    # 如果沒有詳細錯誤比對訊息 (例如，全部答對或沒有作答時結束一輪)
+                    st.session_state.last_message = "🔄 一輪結束，進入錯題複習模式！"
+                    
+                go_next_question() # 遞迴呼叫以設定複習模式的第一題 index
+                
             else:
                 st.session_state.sequence_cursor = 0
                 st.session_state.current_display_index = 0
                 st.session_state.last_message = "💯 太強了！全部答對，直接開始新的一輪！"
 
 
-# --- 介面顯示 ---
+# --- 介面顯示 (修正訊息解析邏輯) ---
 
 # 確保一開始有題目
 current_index = st.session_state.current_display_index
@@ -312,33 +343,35 @@ centralized_gtts_playback()
 if st.session_state.last_message:
     message = st.session_state.last_message
     
-    font_size = "13px" # 🌟 修正 2: 錯誤提示的字體大小調整為 30px
+    font_size = "24px" # 調整字體大小為 24px
     
-    # --- 【修正】處理差異化 HTML 顯示 ---
+    # --- 【修正】處理差異化 HTML 顯示 (使用 |DIFF_SEP| 分隔符) ---
     if message.startswith("HTML_DIFF_START") and message.endswith("HTML_DIFF_END"):
         
         # 提取前綴訊息和 HTML 內容
         content = message[len("HTML_DIFF_START"):-len("HTML_DIFF_END")]
         
-        # 🌟 修正點：改用新的明確分隔符號 '|DIFF_SEP|' 來分割前綴訊息和 HTML 內容
-        parts = content.split('|DIFF_SEP|', 1) 
+        # 🌟 修正點：使用明確的分隔符號 '<div style=\'text-align: center' 來分割前綴訊息和 HTML 內容
+        # 由於 get_diff_html 的返回格式是固定的，這裡可以利用它來分割
+        parts = content.split('<div style=\'text-align: center', 1) 
         
         # 🌟 修正點：加入長度檢查以避免 Index Error
         if len(parts) >= 2:
             prefix_message = parts[0]
-            diff_html_content = parts[1]
+            # 重新組合 HTML
+            diff_html_content = '<div style=\'text-align: center' + parts[1] 
         else:
-            # 如果分割失敗 (意外狀況)，則整個內容都是 prefix，沒有 HTML 差異內容
             prefix_message = content 
             diff_html_content = "" 
         
         # 移除訊息中 Streamlit 內建的圖示
-        display_message = prefix_message.replace("❌ ", "").replace("⏭️ ", "").replace("🔄 ", "")
+        # 這裡不移除，讓訊息中的 ❌ 🔄 符號正常顯示
+        display_message = prefix_message
         
         # 創建完整的 HTML 內容，結合錯誤提示框和差異化顯示
         html_content = f"""
         <div style="background-color: #ffeaea; border-radius: 0.25rem; padding: 1rem; border-left: 0.5rem solid #f00; color: #000;">
-            <span style="font-size: {font_size};">❌ {display_message}</span>
+            <span style="font-size: {font_size};"> {display_message}</span>
             {diff_html_content} 
         </div>
         """
@@ -375,7 +408,7 @@ if st.session_state.last_message:
     # 確保訊息在顯示後被清除
     st.session_state.last_message = ""
         
-# --- 狀態模式顯示 ---
+# --- 狀態模式顯示 (保持不變) ---
 if st.session_state.study_mode == 'REVIEW':
     st.warning(f"🔥 錯題複習模式 (剩餘 {len(st.session_state.wrong_queue)} 題)")
 else:
@@ -402,7 +435,7 @@ st.markdown(f"**英文定義：** *{definition}*")
 st.write(f"**中文定義：** *{definition_zh}*") 
 
 
-# --- 單字答題表單 ---
+# --- 單字答題表單 (保持不變) ---
 input_key = f"input_{current_index}_{st.session_state.study_mode}" 
 
 with st.form(key=f"form_{current_index}", clear_on_submit=True):
@@ -437,9 +470,8 @@ with st.form(key=f"form_{current_index}", clear_on_submit=True):
             
             # 2. 準備顯示訊息 (將差異 HTML 儲存到 last_message)
             msg_prefix = f"❌ 答錯！正確答案是：**{current_word}** (你的輸入：**{user_text}**)" if user_text else f"⏭️ 跳過！正確答案是：**{current_word}**"
-            
-            # 🌟 修正點：使用明確的分隔符號 |DIFF_SEP| 儲存訊息，避免 Index Error
-            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}|DIFF_SEP|{diff_html}HTML_DIFF_END"
+            # 🌟 修正點：直接將差異 HTML 內容接在 msg_prefix 後面
+            st.session_state.last_message = f"HTML_DIFF_START{msg_prefix}{diff_html}HTML_DIFF_END"
             # --------------------------------
 
             if current_index not in st.session_state.wrong_queue:
